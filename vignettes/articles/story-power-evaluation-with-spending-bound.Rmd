@@ -1,5 +1,5 @@
 ---
-title: "Power evaluation with spending bounds"
+title: "Power Evaluation with Spending Bounds"
 author: "Keaven M. Anderson"
 output:
   rmarkdown::html_document:
@@ -175,33 +175,42 @@ $$
 $$
 We also note by definition that $\sigma^2_{0k}/\sigma^2_{1k}=\mathcal I_k/\mathcal I_{0k}.$ Based on an input $p_1, p_2, n_k, \xi_1, \xi_2 = 1-\xi_1$ we will compute $\theta, \mathcal{I}_k, \mathcal{I}_{0k}$ for any $k = 1, 2, \ldots, K$.
 
-We note that $\chi^2=Z^2_k$ is the $\chi^2$ test without continuity correction as recommended by @gordon1996myth. Note finally that this extends in a straightforward way the non-inferiority test of @farrington1990test if the null hypothesis is $\theta = p_1 - p_2 - \delta = 0$ for some non-inferiority margin $\delta > 0$; $\delta < 0$ would correspond to what is referred to as super-superiority @chan2002power, requiring that experimental therapy has been shown to be superior to control by at least a margin $-\delta>0$.
+We note that $\chi^2=Z^2_k$ is the $\chi^2$ test without continuity correction as recommended by @gordon1996myth. Note finally that this extends in a straightforward way the non-inferiority test of @farrington1990test if the null hypothesis is $\theta = p_1 - p_2 - \theta = 0$ for some non-inferiority margin $\theta > 0$; $\theta < 0$ would correspond to what is referred to as super-superiority @chan2002power, requiring that experimental therapy has been shown to be superior to control by at least a margin $-\theta>0$.
 
-# Power Calculations
+# Power and Bound Calculations
 
 We begin with developing a function `gs_info_binomial()` to calculate the statistical information discussed above.
 
 ```{r}
-gs_info_binomial <- function(p1, p2, xi1, n, delta = NULL) {
-  if (is.null(delta)) delta <- p1 - p2
+# Definitions for function arguments
+# p1: probability of failure in higher rate group at each analysis (scalar)
+# p2: probability of failure in lower rate group at each analysis (scalar)
+# xi1: proportion randomized to group 1 (scalar)
+# n: sample size at each analysis (vector of increasing positive integers)
+# theta1: assumed treatment difference (p1 - p2) under alternate hypothesis (scalar)
+# Note that null hypothesis assumes p1 = p2.
+#
+gs_info_binomial <- function(p1, p2, xi1, n, theta1 = NULL) {
+  if (is.null(theta1)) theta1 <- p1 - p2
   # Compute (constant) effect size at each analysis theta
   theta <- rep(p1 - p2, length(n))
-  # compute null hypothesis rate, p0
+  theta1 <- rep(theta1, length(n))
+  # compute null hypothesis rate, p0 as weighted average of p1, p2
   p0 <- xi1 * p1 + (1 - xi1) * p2
   # compute information based on p1, p2
   info <- n / (p1 * (1 - p1) / xi1 + p2 * (1 - p2) / (1 - xi1))
   # compute information based on null hypothesis rate of p0
   info0 <- n / (p0 * (1 - p0) * (1 / xi1 + 1 / (1 - xi1)))
   # compute information based on H1 rates of p1star, p2star
-  p1star <- p0 + delta * xi1
-  p2star <- p0 - delta * (1 - xi1)
+  p1star <- p0 + theta1 * xi1
+  p2star <- p0 - theta1 * (1 - xi1)
   info1 <- n / (p1star * (1 - p1star) / xi1 + p2star * (1 - p2star) / (1 - xi1))
 
   out <- tibble(
     Analysis = seq_along(n),
     n = n,
     theta = theta,
-    theta1 = rep(delta, length(n)),
+    theta1 = theta1,
     info = info,
     info0 = info0,
     info1 = info1
@@ -210,14 +219,17 @@ gs_info_binomial <- function(p1, p2, xi1, n, delta = NULL) {
 }
 ```
 
-For the CAPTURE trial, we have
+For the CAPTURE trial, we consider $\theta = p_1 - p_2$, the risk difference, to be the parameter of interest.
+We will consider $H_0: \theta=\theta_0 = 0$ and $H_1: \theta=\theta_1=0.05.$ We will consider $\alpha-$spending (under $H_0$) for the efficacy bound, and $\beta-$spending (under $H_1$) for a futility bound. For our example, we will consider power when $\theta=0.06=0.13-0.07$.
+In the following, `info0`, `info1` and `info` will represent information under the null ($\theta_0=0$), alternate ($\theta_1$) and under a third option ($\theta=0.07=0.13 - 0.06$).
 
 ```{r}
-h1 <- gs_info_binomial(p1 = .15, p2 = .1, xi1 = .5, n = c(350, 700, 1400))
+h1 <- gs_info_binomial(p1 = .13, p2 = .07, theta1 = .05, xi1 = .5, n = c(350, 700, 1400))
 h1 %>% gt()
 ```
 
-We can plug these into `gs_power_npe()` with the intended spending functions. We begin with power under the alternate hypothesis
+We can plug these into `gs_power_npe()` with the intended spending functions. 
+We note again that the upper spending uses `info0` and the information fraction is based on `info0`.
 
 ```{r}
 gs_power_npe(
@@ -230,26 +242,21 @@ gs_power_npe(
   upar = list(sf = gsDesign::sfLDOF, total_spend = 0.025),
   lower = gs_spending_bound,
   lpar = list(sf = gsDesign::sfHSD, param = -2, total_spend = 0.2)
-) %>%
-  gt() %>%
-  fmt_number(columns = 3:10, decimals = 4)
+) %>% 
+  arrange(analysis, desc(info_frac)) %>%
+  mutate(Analysis = paste("Analysis:", analysis, 
+                          "Information: (actual, null, alt)", 
+                          round(info), round(info0, 1), round(info1, 1), 
+                          "theta:", round(theta,2), "t:", round(info_frac, 2))) %>%
+   select(-c(theta, theta1, info_frac, info0, info, info1, analysis)) %>% 
+  group_by(Analysis) %>% gt() %>% fmt_number(decimals = 3)
 ```
 
-Now we examine information for a smaller assumed treatment difference than the alternative:
+We need to further verify:
 
-```{r}
-h <- gs_info_binomial(p1 = .15, p2 = .12, xi1 = .5, delta = .05, n = c(350, 700, 1400))
-
-gs_power_npe(
-  theta = h$theta, theta1 = h$theta1, info = h$info,
-  info0 = h$info0, info1 = h$info1,
-  upper = gs_spending_bound,
-  upar = list(sf = gsDesign::sfLDOF, total_spend = 0.025),
-  lower = gs_spending_bound,
-  lpar = list(sf = gsDesign::sfHSD, param = -2, total_spend = 0.2)
-) %>%
-  gt() %>%
-  fmt_number(columns = 3:10, decimals = 4)
-```
+1) Power is computed for $p1=.13, p2=.07$ and $\theta=0.06$.
+2) The information fraction is computed based on the null hypothesis information.
+3) The upper bound is computed based on the null hypothesis information.
+4) The lower bound is computed based on the alternate hypothesis information with appropriately computed $p1, p2$.
 
 # References

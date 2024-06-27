@@ -1,5 +1,6 @@
 ---
-title: "Non-proportional effect size in group sequential design"
+title: "NPES: Non-Proportional Effect Size in Group Sequential Design"
+subtitle: "Distribution Assumptions and Notation"
 author: "Keaven M. Anderson"
 output:
   rmarkdown::html_document:
@@ -33,7 +34,7 @@ library(gsDesign2)
 # Overview
 
 The acronym NPES is short for non-proportional effect size.
-While it is motivated primarily by a use for when designing a time-to-event trial under non-proportional hazards (NPH), we have simplified and generalized the concept here. The model is likely to be useful for rank-based survival tests beyond the logrank test that will be considered initially by @tsiatis1982repeated.
+While it is motivated primarily by a use for when designing a time-to-event trial under non-proportional hazards (NPH), we have simplified and generalized the concept here. The model is used initially for logrank and weighted logrank tests that will be considered initially by @tsiatis1982repeated.
 It could also be useful in other situations where treatment effect may vary over time in a trial for some reason.
 We generalize the framework of Chapter 2 of @proschan2006statistical to incorporate the possibility of the treatment effect changing during the course of a trial in some systematic way.
 This vignettes addresses distribution theory and initial technical issues around computing
@@ -46,14 +47,15 @@ Additional specifics around boundary computation, power and sample size are prov
 
 # The probability model
 
-## The continuous model and E-process
+## The continuous model, S-process and E-process
 
 We consider a simple example here to motivate distribution theory that is quite general and applies across many situations.
 For instance, @proschan2006statistical immediately suggest paired observations, time-to-event and binary outcomes as endpoints where the theory is applicable.
 
-We assume for a given integer $N>0$ that $X_{i}$ are independent, $i=1,2,\ldots$.
+We assume for a given integer $N>0$ that $X_{i}$ are independent, $i=1,2,\ldots, N$.
 For some integer $K\leq N$ we assume we will perform analysis $K$ times after $0<n_1<n_2,\ldots ,n_K = N$ observations are available for analysis.
-Note that we have not confined $n\leq N$, but $N$ can be considered the final planned sample size.
+For $1\le k\le K$, we define the S-process as 
+$$S_k=\sum_{i=1}^{n_k}X_i.$$
 @proschan2006statistical refer to the estimation or E-process which we extend here to
 
 $$\hat{\theta}_k = \frac{\sum_{i=1}^{n_k} X_{i}}{n_k}\equiv \bar X_{k}.$$
@@ -71,7 +73,8 @@ The sample average variance under this assumption is for $1\leq k\leq K$
 $$\hbox{Var}(\hat\theta(t_k))=\hbox{Var}(\bar X_k) =  1/ n_k.$$
 The statistical information for the estimate $\hat\theta(t_k)$ for $1\leq k\leq K$ for this case is
 $$ \mathcal{I}_k \equiv \frac{1}{\hbox{Var}(\hat\theta(t_k))} = n_k.$$
-We now see that $t_k$, $1\leq k\leq K$ is the so-called information fraction at analysis $k$ in that
+For the Cox model, we would define $S_k=\mathcal{I}_k\hat\theta_k$ where $\mathcal{I}_k$ is the statistical information at analysis $k$.
+We see that $t_k$, $1\leq k\leq K$ is the so-called information fraction at analysis $k$ in that
 $t_k=\mathcal{I}_k/\mathcal{I}_K.$
 
 ## Z-process
@@ -99,21 +102,23 @@ $$\hbox{Var}(B_k) = t_k.$$
 For our example, we have
 
 $$B_k=\frac{1}{\sqrt N}\sum_{i=1}^{n_k}X_i.$$
-It can be useful to think of $B_k$ as a sum of independent random variables.
+It can be useful to think of $B_k$ as a sum of independent random variables divided by the final analysis statistical information.
+The S-process can also be thought of like a Brownian motion process.
 
-## Summary of E-, Z- and B-processes
+## Summary of E-, S-, Z- and B-processes
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 mt <- tibble::tribble(
   ~Statistic, ~Example, ~"Expected value", ~Variance,
   "$\\hat\\theta_k$", "$\\bar X_k$", "$\\theta(t_k)$", "$\\mathcal{I}_k^{-1}$",
+  "$S_k=\\mathcal{I}_k\\theta_k$", "$n_k\\bar X_k$", "$\\mathcal{I}_k\\theta(t_k)$", "$\\mathcal{I}_k$",
   "$Z_k=\\sqrt{\\mathcal{I}_k}\\hat\\theta_k$",
   "$\\sqrt{n_k}\\bar X_k$", "$\\sqrt{\\mathcal{I}_k}\\theta(t_k)$",
   "$1$",
   "$B_k=\\sqrt{t_k}Z_k$", "$\\sum_{i=1}^{n_k}X_i/\\sqrt N$",
   "$t_k\\sqrt{\\mathcal{I}_K}\\
-  \theta(t_k)=\\mathcal{I}_k\\
-  \theta(t_k)/\\sqrt{\\mathcal{I}_K}$",
+  \\theta(t_k)=\\mathcal{I}_k\\
+  \\theta(t_k)/\\sqrt{\\mathcal{I}_K}$",
   "$t_k$"
 )
 mt %>% kable(escape = FALSE)

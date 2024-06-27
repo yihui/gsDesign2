@@ -30,7 +30,7 @@
 #' Initial bound types supported are 1) spending bounds,
 #' 2) fixed bounds, and 3) Haybittle-Peto-like bounds.
 #' The requirement is to have a boundary update method that can
-#' each bound without knowledge of future bounds.
+#' update at the time of each analysis without knowledge of future bounds.
 #' As an example, bounds based on conditional power that require
 #' knowledge of all future bounds are not supported by this routine;
 #' a more limited conditional power method will be demonstrated.
@@ -85,34 +85,31 @@
 #' @section Specification:
 #' \if{latex}{
 #'  \itemize{
-#'    \item Extract the length of input info as the number of interim analysis.
+#'    \item Extract the length of input info as the number of analyses.
 #'    \item Validate if input info0 is NULL, so set it equal to info.
 #'    \item Validate if the length of inputs info and info0 are the same.
-#'    \item Validate if input theta is a scalar, so replicate
-#'    the value for all k interim analysis.
-#'    \item Validate if input theta1 is NULL and if it is a scalar.
+#'    \item Validate if input theta is a scalar, replicate
+#'    the value for all k analyses.
+#'    \item Validate if input theta1 is NULL.
 #'    If it is NULL, set it equal to input theta. If it is a scalar,
-#'    replicate the value for all k interim analysis.
+#'    replicate the value for all k analyses.
 #'    \item Validate if input test_upper is a scalar,
-#'    so replicate the value for all k interim analysis.
+#'    so replicate the value for all analyses.
 #'    \item Validate if input test_lower is a scalar,
-#'    so replicate the value for all k interim analysis.
+#'    so replicate the value for all analyses.
 #'    \item Define vector a to be -Inf with
-#'    length equal to the number of interim analysis.
+#'    length equal to the number of analysis.
 #'    \item Define vector b to be Inf with
-#'    length equal to the number of interim analysis.
+#'    length equal to the number of analysis.
 #'    \item Define hgm1_0 and hgm1 to be NULL.
 #'    \item Define upper_prob and lower_prob to be
-#'    vectors of NA with length of the number of interim analysis.
+#'    vectors of NA with length of the number of analysis.
 #'    \item Update lower and upper bounds using \code{gs_b()}.
 #'    \item If there are no interim analysis, compute probabilities
 #'    of crossing upper and lower bounds
-#'    using \code{h1()}.
-#'    \item Compute cross upper and lower bound probabilities
-#'    using \code{hupdate()} and \code{h1()}.
+#'    using \code{h1()}. Otherwise, compute probabilities using \code{hupdate()} and \code{h1()}.
 #'    \item Return a tibble of analysis number, bound, z-values,
-#'    probability of crossing bounds,
-#'    theta, theta1, info, and info0.
+#'    probability of crossing bounds, theta, theta1, info, and info0.
 #'   }
 #' }
 #' \if{html}{The contents of this section are shown in PDF user manual only.}

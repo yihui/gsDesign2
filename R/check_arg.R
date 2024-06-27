@@ -370,7 +370,7 @@ check_ratio <- function(ratio) {
 #' check_info(info)
 check_info <- function(info) {
   if (!is.vector(info, mode = "numeric")) {
-    stop("gs_design_npe() or gs_power_npe(): info must be specified numeric vector!")
+    stop("gs_design_npe() or gs_power_npe(): info must be specified as a numeric vector!")
   }
   if (min(info - fastlag(info, first = 0)) <= 0) {
     stop("gs_design_npe() or gs_power_npe(): info much be strictly increasing and positive!")
